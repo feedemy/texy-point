@@ -30,7 +30,26 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEY61dkq1+/awxVJhauo6doSg1+xr4
 '@
 
 function Info { param($m) Write-Host ":: $m" -ForegroundColor Cyan }
+function Warn { param($m) Write-Host "WARNING: $m" -ForegroundColor Yellow }
 function Die  { param($m) Write-Host "ERROR: $m" -ForegroundColor Red; exit 1 }
+
+# The camera variant decodes RTSP via the system `ffmpeg` binary (subprocess). We do
+# NOT bundle ffmpeg (keeps the distribution license-clean); install it via winget if
+# missing. If winget is unavailable we warn (camera won't decode until ffmpeg is added).
+function Install-Ffmpeg {
+    if (Get-Command ffmpeg -ErrorAction SilentlyContinue) { Info "ffmpeg already present"; return }
+    Info "camera variant requires ffmpeg — installing via winget..."
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        try {
+            winget install --exact --id Gyan.FFmpeg --silent `
+                --accept-source-agreements --accept-package-agreements | Out-Null
+        } catch { Warn "winget install failed: $_" }
+        if (Get-Command ffmpeg -ErrorAction SilentlyContinue) { Info "ffmpeg ready" }
+        else { Warn "ffmpeg installed but not on PATH in this session — available after a new terminal / service restart" }
+    } else {
+        Warn "winget not available — install ffmpeg manually (https://ffmpeg.org); the camera variant will not decode until then"
+    }
+}
 
 # ── Privilege check (up front, before downloading) ────────────────────────────
 # Installing registers a Windows service and writes to machine paths, so it
@@ -101,6 +120,9 @@ try {
     }
     if (-not $sigOk) { Die "SIGNATURE VERIFICATION FAILED — package is not trusted (tampered/forged), aborting" }
     Info "signature verified"
+
+    # Camera variant needs ffmpeg at runtime — ensure it before handing off.
+    if ($Variant -eq 'camera') { Install-Ffmpeg }
 
     # ── Install (delegate to bundled installer: checksum + slot + service) ────
     Info "installing (requires administrator)..."

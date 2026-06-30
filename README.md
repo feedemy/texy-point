@@ -67,6 +67,12 @@ $env:TEXYPOINT_VARIANT='camera'; irm https://raw.githubusercontent.com/feedemy/t
 | **camera** | RTSP cameras (ONVIF discovery + decode), motion detection, **WebRTC** live view, **license-plate recognition (ANPR)**. | Linux x86_64 / Pi 5, Windows. **Not** Pi Zero. |
 | **internal-reader** | On-board **NFC (PN532)** + **QR (GM67)** + RGB status LED + buzzer wired to the device. | **Linux only** (hardware drivers). |
 
+> **camera prerequisite — ffmpeg:** the camera variant decodes RTSP via the system
+> `ffmpeg` binary. The installer **auto-installs it** (apt / dnf / pacman / zypper / apk
+> on Linux, winget on Windows). If automatic install fails, add it manually
+> (`sudo apt install ffmpeg`, or download from <https://ffmpeg.org>) — the camera will
+> not decode until ffmpeg is on PATH.
+
 ---
 
 ## What each capability does

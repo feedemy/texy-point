@@ -36,6 +36,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEY61dkq1+/awxVJhauo6doSg1+xr4
 -----END PUBLIC KEY-----'
 
 info() { echo ":: $*"; }
+warn() { echo "WARNING: $*" >&2; }
 die()  { echo "ERROR: $*" >&2; exit 1; }
 
 for tool in curl tar openssl; do
@@ -47,14 +48,34 @@ done
 # the install step needs root. The bootstrap itself downloads/verifies as the
 # current user; the bundled installer then elevates via sudo. Check now so we
 # give clear guidance BEFORE doing any work, not midway through.
+SUDO=""
 if [[ "$(id -u)" -ne 0 ]]; then
     if command -v sudo >/dev/null 2>&1; then
+        SUDO="sudo"
         info "note: installation needs root — you will be prompted for your sudo password"
         info "      (for a non-interactive install run: curl -fsSL <url> | sudo bash)"
     else
         die "installation requires root, and 'sudo' is not available — run this as root"
     fi
 fi
+
+# ── ffmpeg (camera variant runtime dependency) ────────────────────────────────
+# The camera variant decodes RTSP via the system `ffmpeg` binary (called as a
+# subprocess). We do NOT bundle ffmpeg — that keeps the distribution license-clean;
+# instead we ask the OS package manager to install it. If none is found we warn
+# (camera will not decode until ffmpeg is present) but do not abort the install.
+ensure_ffmpeg() {
+    if command -v ffmpeg >/dev/null 2>&1; then info "ffmpeg already present"; return 0; fi
+    info "camera variant requires ffmpeg — installing via system package manager..."
+    if   command -v apt-get >/dev/null 2>&1; then $SUDO apt-get update -qq && $SUDO apt-get install -y -qq ffmpeg || true
+    elif command -v dnf     >/dev/null 2>&1; then $SUDO dnf install -y ffmpeg || true
+    elif command -v pacman  >/dev/null 2>&1; then $SUDO pacman -S --noconfirm ffmpeg || true
+    elif command -v zypper  >/dev/null 2>&1; then $SUDO zypper install -y ffmpeg || true
+    elif command -v apk     >/dev/null 2>&1; then $SUDO apk add ffmpeg || true
+    else info "  no supported package manager found — skipping"; fi
+    if command -v ffmpeg >/dev/null 2>&1; then info "ffmpeg ready ✓"
+    else warn "ffmpeg not installed — the camera variant will not decode until you install it (e.g. 'apt install ffmpeg')"; fi
+}
 
 # ── Platform → target triple ──────────────────────────────────────────────────
 os="$(uname -s)"; arch="$(uname -m)"
@@ -101,6 +122,9 @@ openssl dgst -sha256 -verify "$tmp/trust.pem" \
     -signature "$dir/SHA256SUMS.sig" "$dir/SHA256SUMS" >/dev/null 2>&1 \
     || die "SIGNATURE VERIFICATION FAILED — package is not trusted (tampered/forged), aborting"
 info "signature verified ✓"
+
+# Camera variant needs ffmpeg at runtime — ensure it before handing off.
+[[ "$VARIANT" == "camera" ]] && ensure_ffmpeg
 
 # ── Install (delegate to bundled installer: checksum + slot + service) ────────
 info "installing (may require administrator/sudo)..."
