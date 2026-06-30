@@ -32,6 +32,15 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEY61dkq1+/awxVJhauo6doSg1+xr4
 function Info { param($m) Write-Host ":: $m" -ForegroundColor Cyan }
 function Die  { param($m) Write-Host "ERROR: $m" -ForegroundColor Red; exit 1 }
 
+# ── Privilege check (up front, before downloading) ────────────────────────────
+# Installing registers a Windows service and writes to machine paths, so it
+# requires administrator. Check now so we fail with clear guidance BEFORE
+# downloading, instead of midway through the bundled installer.
+$principal = [System.Security.Principal.WindowsPrincipal][System.Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Die "administrator required. Open PowerShell as Administrator (right-click -> 'Run as administrator'), then run the one-liner again."
+}
+
 # ── Platform → target triple ──────────────────────────────────────────────────
 $arch = $env:PROCESSOR_ARCHITECTURE
 if ($arch -ne 'AMD64') { Die "unsupported architecture: $arch (x86_64/AMD64 supported)" }

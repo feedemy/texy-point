@@ -42,6 +42,20 @@ for tool in curl tar openssl; do
     command -v "$tool" >/dev/null 2>&1 || die "$tool is required (not installed)"
 done
 
+# ── Privilege check (up front, before downloading) ────────────────────────────
+# Installing registers a system service (systemd) and writes to system paths, so
+# the install step needs root. The bootstrap itself downloads/verifies as the
+# current user; the bundled installer then elevates via sudo. Check now so we
+# give clear guidance BEFORE doing any work, not midway through.
+if [[ "$(id -u)" -ne 0 ]]; then
+    if command -v sudo >/dev/null 2>&1; then
+        info "note: installation needs root — you will be prompted for your sudo password"
+        info "      (for a non-interactive install run: curl -fsSL <url> | sudo bash)"
+    else
+        die "installation requires root, and 'sudo' is not available — run this as root"
+    fi
+fi
+
 # ── Platform → target triple ──────────────────────────────────────────────────
 os="$(uname -s)"; arch="$(uname -m)"
 case "$os" in

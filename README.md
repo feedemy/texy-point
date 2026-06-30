@@ -11,17 +11,27 @@ GPIO / Modbus relay control on a single cross-platform binary.
 
 ## Install (one line)
 
+> Installation registers a system **service** and writes to system paths, so it needs
+> **root** on Linux / **Administrator** on Windows. The commands below account for that.
+
 ### Linux — x86_64, or ARM (Raspberry Pi 5 / Pi Zero 2W)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/feedemy/texy-point/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/feedemy/texy-point/main/install.sh | sudo bash
 ```
 
+If you are already root, drop `sudo`. Without `sudo` the script still downloads and
+verifies, but prompts for your password at the install step.
+
 ### Windows — x86_64
+
+Open **PowerShell as Administrator** (right-click → *Run as administrator*), then:
 
 ```powershell
 irm https://raw.githubusercontent.com/feedemy/texy-point/main/install.ps1 | iex
 ```
+
+(The installer checks for Administrator up front and stops with guidance if it is missing.)
 
 The installer detects your platform, downloads the latest release, **verifies its
 p256 signature against an embedded public key**, then installs it (slot layout +
@@ -42,8 +52,8 @@ hardware needs it:
 
 ```bash
 # Linux — camera/ANPR (Pi 5 / x86_64) OR on-board NFC+QR reader (Pi Zero / Pi 5)
-curl -fsSL https://raw.githubusercontent.com/feedemy/texy-point/main/install.sh | bash -s -- --variant camera
-curl -fsSL https://raw.githubusercontent.com/feedemy/texy-point/main/install.sh | bash -s -- --variant internal-reader
+curl -fsSL https://raw.githubusercontent.com/feedemy/texy-point/main/install.sh | sudo bash -s -- --variant camera
+curl -fsSL https://raw.githubusercontent.com/feedemy/texy-point/main/install.sh | sudo bash -s -- --variant internal-reader
 ```
 
 ```powershell
